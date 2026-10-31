@@ -1,0 +1,1 @@
+<!-- Self-contained PAN India Collection Dashboard served statically -->

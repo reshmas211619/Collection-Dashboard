@@ -1,0 +1,6 @@
+{
+  "name": "PAN India Collection Dashboard",
+  "description": "Enterprise financial collection dashboard with invoice reconciliation, ageing analysis, regional PAN India insights, and 3-sheet Excel reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAN India Collection Dashboard — Finance Department</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS (xlsx) CDN -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    .font-mono, .tabular-nums {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white shadow-inner text-lg">
+            ₹
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white leading-tight">
+              PAN India Collection Dashboard
+            </h1>
+            <p class="text-xs text-slate-400">Finance Department · Accounts Receivable & Treasury</p>
+          </div>
+        </div>
+
+        <div class="hidden lg:flex items-center gap-3 text-xs text-slate-300">
+          <div id="auditStatusBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-emerald-400">
+            ● Audit Reconciled
+          </div>
+          <span class="text-slate-500">·</span>
+          <span class="text-slate-400">Refreshed: <span id="lastRefreshTime" class="font-mono text-slate-200">Just now</span></span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="openMethodologyModal()" class="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+            Methodology
+          </button>
+          <button onclick="openResetModal()" class="px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-950/40 rounded-lg transition-colors">
+            Reset Data
+          </button>
+          <button onclick="exportExcelReport()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Download Excel (3 Sheets)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- COMPONENT 1: DATA INGESTION & SAMPLE BUTTON -->
+    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Data Ingestion & File Reconciliation</h2>
+          <p class="text-xs text-slate-500 mt-0.5">
+            Upload Customer Billing Data (invoice level) and Collection File (payment receipts). Automatic reconciliation runs client-side.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="loadSamplePANData()" class="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors">
+            ★ Load Comprehensive PAN India Sample Data
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <!-- Billing Upload Card -->
+        <div id="billingCard" class="p-4 rounded-lg border border-slate-200 bg-slate-50/50">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                A
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-slate-800">A. Customer Billing Data</h3>
+                <p class="text-xs text-slate-500">Invoice-level billing master (.xlsx, .csv)</p>
+              </div>
+            </div>
+            <button onclick="downloadSampleBillingTemplate()" class="text-xs text-slate-600 hover:text-slate-900 hover:underline">
+              Download Template
+            </button>
+          </div>
+          <div class="mt-3.5 flex items-center justify-between text-xs">
+            <div class="truncate pr-2">
+              <span id="billingFileName" class="font-medium text-slate-700 block truncate">No file selected</span>
+              <span id="billingCount" class="text-slate-500 font-mono">0 records</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="file" id="billingFileInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleBillingUpload(event)">
+              <button onclick="document.getElementById('billingFileInput').click()" class="px-3 py-1.5 text-xs font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg">
+                Upload File
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Collection Upload Card -->
+        <div id="collectionCard" class="p-4 rounded-lg border border-slate-200 bg-slate-50/50">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                B
+              </div>
+              <div>
+                <h3 class="text-sm font-semibold text-slate-800">B. Collection File</h3>
+                <p class="text-xs text-slate-500">Bank payments & receipts (.xlsx, .csv)</p>
+              </div>
+            </div>
+            <button onclick="downloadSampleCollectionTemplate()" class="text-xs text-slate-600 hover:text-slate-900 hover:underline">
+              Download Template
+            </button>
+          </div>
+          <div class="mt-3.5 flex items-center justify-between text-xs">
+            <div class="truncate pr-2">
+              <span id="collectionFileName" class="font-medium text-slate-700 block truncate">No file selected</span>
+              <span id="collectionCount" class="text-slate-500 font-mono">0 records</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="file" id="collectionFileInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleCollectionUpload(event)">
+              <button onclick="document.getElementById('collectionFileInput').click()" class="px-3 py-1.5 text-xs font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg">
+                Upload File
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validation Error Banner -->
+      <div id="validationBanner" class="hidden mt-3.5 px-3.5 py-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-xs text-red-800">
+        <div>
+          <strong>Validation Alert:</strong> <span id="validationErrorSummary">0 errors flagged.</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openValidationModal()" class="font-semibold underline text-red-800 hover:text-red-900">View Errors</button>
+          <button onclick="downloadValidationErrors()" class="px-2 py-0.5 bg-red-700 text-white rounded font-medium">Download Error Report</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPONENT 3: MULTI-DIMENSIONAL FILTERS -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="font-bold uppercase tracking-wider text-slate-700">PAN India Multi-Dimensional Filters</span>
+          <span id="filteredCountBadge" class="text-slate-500 font-normal"></span>
+        </div>
+        <button onclick="resetFilters()" class="text-blue-600 hover:underline font-medium">Reset Filters</button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Financial Year</label>
+          <select id="filterFY" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All FYs</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Reporting Month</label>
+          <select id="filterMonth" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Months</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Weekly Reporting View</label>
+          <select id="filterWeek" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Weeks (Consolidated)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Geographic Region</label>
+          <select id="filterRegion" onchange="handleRegionChange()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Regions (PAN India)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">State</label>
+          <select id="filterState" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All States</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Customer</label>
+          <select id="filterCustomer" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Customers</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Salesperson</label>
+          <select id="filterSalesperson" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Salespeople</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Invoice Status</label>
+          <select id="filterStatus" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Statuses</option>
+            <option value="Fully Paid">Fully Paid</option>
+            <option value="Partially Paid">Partially Paid</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Overcollected">Overcollected</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Ageing Bucket</label>
+          <select id="filterAgeing" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+            <option value="All">All Buckets</option>
+            <option value="Not Due">Not Due</option>
+            <option value="1–30 Days">1–30 Days</option>
+            <option value="31–60 Days">31–60 Days</option>
+            <option value="61–90 Days">61–90 Days</option>
+            <option value="Above 90 Days">Above 90 Days</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-2xs font-semibold text-slate-500 mb-1">Search Keywords</label>
+          <input type="text" id="filterSearch" oninput="applyFilters()" placeholder="Invoice / Customer..." class="w-full bg-slate-50 border border-slate-300 rounded-lg p-1.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPONENT 4: KPI CARDS & AUDIT STRIP -->
+    <div class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- KPI 1 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <div class="text-2xs font-bold uppercase text-slate-500">Total Billing (Invoiced)</div>
+          <div id="kpiBillingShort" class="text-2xl font-extrabold text-slate-900 font-mono mt-1">₹0</div>
+          <div id="kpiBillingExact" class="text-2xs text-slate-500 font-mono mt-2 pt-2 border-t border-slate-100">Exact: ₹0</div>
+        </div>
+        <!-- KPI 2 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <div class="text-2xs font-bold uppercase text-emerald-700">Total Collection (Realized)</div>
+          <div id="kpiCollectionShort" class="text-2xl font-extrabold text-emerald-700 font-mono mt-1">₹0</div>
+          <div id="kpiCollectionExact" class="text-2xs text-slate-500 font-mono mt-2 pt-2 border-t border-slate-100">Exact: ₹0</div>
+        </div>
+        <!-- KPI 3 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <div class="text-2xs font-bold uppercase text-amber-700">Total Outstanding</div>
+          <div id="kpiOutstandingShort" class="text-2xl font-extrabold text-amber-700 font-mono mt-1">₹0</div>
+          <div id="kpiOutstandingExact" class="text-2xs text-slate-500 font-mono mt-2 pt-2 border-t border-slate-100">Exact: ₹0</div>
+        </div>
+        <!-- KPI 4 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <div class="text-2xs font-bold uppercase text-slate-700">Collection Efficiency %</div>
+          <div id="kpiEfficiency" class="text-2xl font-extrabold text-slate-900 font-mono mt-1">0.0%</div>
+          <div id="kpiTargetComparison" class="text-2xs text-slate-500 font-mono mt-2 pt-2 border-t border-slate-100">Target: 85%</div>
+        </div>
+        <!-- KPI 5 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <div class="text-2xs font-bold uppercase text-red-700">Overdue Outstanding</div>
+          <div id="kpiOverdueShort" class="text-2xl font-extrabold text-red-700 font-mono mt-1">₹0</div>
+          <div id="kpiOverdueExact" class="text-2xs text-red-600 font-mono mt-2 pt-2 border-t border-slate-100">Exact: ₹0</div>
+        </div>
+      </div>
+
+      <!-- Audit Reconciliation Strip -->
+      <div class="bg-slate-900 text-white rounded-xl p-3.5 px-5 flex flex-col md:flex-row items-center justify-between text-xs shadow-xs gap-2">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span>
+          <span><strong>Reconciliation Balance Audit: </strong><span id="auditFormulaText" class="font-mono text-slate-300">Billing - Collection = Outstanding</span></span>
+        </div>
+        <div class="font-mono text-2xs">
+          Audit Discrepancy: <span id="auditDiffBadge" class="px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">₹0.00 Balanced</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS SECTION -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-800 mb-1">Weekly Billing vs Collection</h3>
+        <p class="text-2xs text-slate-500 mb-3">Invoice billings versus realized collections by week</p>
+        <div class="h-64"><canvas id="weeklyChart"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-800 mb-1">Outstanding Ageing Analysis</h3>
+        <p class="text-2xs text-slate-500 mb-3">Receivables distributed across credit ageing brackets</p>
+        <div class="h-64"><canvas id="ageingChart"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-800 mb-1">Region-wise Collection Share</h3>
+        <p class="text-2xs text-slate-500 mb-3">Collections categorized by North, South, East, West, Central</p>
+        <div class="h-64"><canvas id="regionChart"></canvas></div>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+        <h3 class="text-sm font-bold text-slate-800 mb-1">Top States by Outstanding</h3>
+        <p class="text-2xs text-slate-500 mb-3">Concentration of pending debt across Indian states</p>
+        <div class="h-64"><canvas id="stateChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- COMPONENT 5: DATA TABLES (3 SHEETS) -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-1 overflow-x-auto">
+          <button id="tabBtn1" onclick="switchTableTab('invoices')" class="px-3 py-1.5 font-semibold rounded-lg bg-white border border-slate-200 text-slate-900 shadow-2xs">
+            Sheet 1: Invoice Master
+          </button>
+          <button id="tabBtn2" onclick="switchTableTab('collections')" class="px-3 py-1.5 font-semibold rounded-lg text-slate-600 hover:text-slate-900">
+            Sheet 2: Collection Details
+          </button>
+          <button id="tabBtn3" onclick="switchTableTab('customers')" class="px-3 py-1.5 font-semibold rounded-lg text-slate-600 hover:text-slate-900">
+            Sheet 3: Customer Summary
+          </button>
+        </div>
+        <div id="tableRecordCount" class="text-slate-500 font-mono text-2xs">0 records</div>
+      </div>
+
+      <!-- Tab Content 1: Invoice Master -->
+      <div id="tabInvoices" class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+            <tr>
+              <th class="py-2.5 px-3">Invoice No</th>
+              <th class="py-2.5 px-3">Customer</th>
+              <th class="py-2.5 px-3">Region / State</th>
+              <th class="py-2.5 px-3">Salesperson</th>
+              <th class="py-2.5 px-3">Invoice Date</th>
+              <th class="py-2.5 px-3">Due Date</th>
+              <th class="py-2.5 px-3 text-right">Invoice Amount</th>
+              <th class="py-2.5 px-3 text-right">Collection Amount</th>
+              <th class="py-2.5 px-3 text-right">Outstanding Amount</th>
+              <th class="py-2.5 px-3 text-center">Collection %</th>
+              <th class="py-2.5 px-3 text-center">Overdue Days</th>
+              <th class="py-2.5 px-3 text-center">Ageing Bucket</th>
+              <th class="py-2.5 px-3 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="invoicesTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+
+      <!-- Tab Content 2: Collection Details -->
+      <div id="tabCollections" class="hidden overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+            <tr>
+              <th class="py-2.5 px-3">Invoice No</th>
+              <th class="py-2.5 px-3">Customer</th>
+              <th class="py-2.5 px-3">Collection Date</th>
+              <th class="py-2.5 px-3 text-right">Collection Amount</th>
+              <th class="py-2.5 px-3">Payment Reference</th>
+              <th class="py-2.5 px-3">Payment Mode</th>
+              <th class="py-2.5 px-3">Bank</th>
+              <th class="py-2.5 px-3">Region</th>
+              <th class="py-2.5 px-3">State</th>
+              <th class="py-2.5 px-3 text-center">Reconciliation Status</th>
+            </tr>
+          </thead>
+          <tbody id="collectionsTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+
+      <!-- Tab Content 3: Customer Summary -->
+      <div id="tabCustomers" class="hidden overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+            <tr>
+              <th class="py-2.5 px-3">Customer</th>
+              <th class="py-2.5 px-3">Region</th>
+              <th class="py-2.5 px-3">State</th>
+              <th class="py-2.5 px-3 text-right">Total Billing</th>
+              <th class="py-2.5 px-3 text-right">Total Collection</th>
+              <th class="py-2.5 px-3 text-right">Total Outstanding</th>
+              <th class="py-2.5 px-3 text-center">Collection %</th>
+              <th class="py-2.5 px-3 text-right">Overdue Outstanding</th>
+              <th class="py-2.5 px-3 text-center">Avg Delay</th>
+              <th class="py-2.5 px-3">Last Collection</th>
+              <th class="py-2.5 px-3 text-center">Ageing Bucket</th>
+              <th class="py-2.5 px-3 text-center">Customer Risk Category</th>
+            </tr>
+          </thead>
+          <tbody id="customersTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- METHODOLOGY MODAL -->
+  <div id="methodologyModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-2xl overflow-hidden p-6 space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-900">Finance Methodology & Accounting Principles</h3>
+        <button onclick="closeMethodologyModal()" class="text-slate-400 hover:text-slate-600 font-bold text-base">&times;</button>
+      </div>
+      <div>
+        <p class="font-bold text-slate-800 mb-1">1. Balance Equation</p>
+        <p class="font-mono text-blue-800 bg-blue-50 p-2 rounded">Outstanding Amount = Max(0, Invoice Amount − Total Collection Amount)</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-800 mb-1">2. Collection Efficiency %</p>
+        <p class="font-mono text-emerald-800 bg-emerald-50 p-2 rounded">Efficiency % = (Total Collection Amount / Total Invoiced Billing) × 100</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-800 mb-1">3. Ageing Buckets</p>
+        <p class="text-slate-600">Calculated as Current Date minus Due Date (for unpaid/partially paid invoices): Not Due, 1–30 Days, 31–60 Days, 61–90 Days, Above 90 Days.</p>
+      </div>
+      <div class="pt-3 border-t text-right">
+        <button onclick="closeMethodologyModal()" class="px-4 py-1.5 bg-slate-800 text-white rounded font-medium">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESET CONFIRMATION MODAL -->
+  <div id="resetModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full text-center space-y-4">
+      <h3 class="text-base font-bold text-slate-900">Clear All Dashboard Data?</h3>
+      <p class="text-xs text-slate-600">This will erase all uploaded customer invoices, payment collections, and stored browser data.</p>
+      <div class="flex items-center justify-center gap-3">
+        <button onclick="closeResetModal()" class="px-4 py-1.5 text-xs border rounded text-slate-700 bg-white hover:bg-slate-50">Cancel</button>
+        <button onclick="confirmResetData()" class="px-4 py-1.5 text-xs rounded bg-red-600 text-white hover:bg-red-700 font-semibold">Confirm Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALIDATION ERRORS MODAL -->
+  <div id="validationModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col p-6 space-y-3">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="text-base font-bold text-slate-900">Validation Error Details</h3>
+        <button onclick="closeValidationModal()" class="text-slate-400 hover:text-slate-600 font-bold text-base">&times;</button>
+      </div>
+      <div class="flex-1 overflow-y-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-100 font-semibold text-slate-700">
+            <tr>
+              <th class="p-2">File</th>
+              <th class="p-2">Row</th>
+              <th class="p-2">Field</th>
+              <th class="p-2">Value</th>
+              <th class="p-2">Error Message</th>
+            </tr>
+          </thead>
+          <tbody id="validationModalTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <div class="pt-3 border-t flex justify-end gap-2">
+        <button onclick="downloadValidationErrors()" class="px-3 py-1.5 bg-red-700 text-white text-xs rounded font-semibold">Export Report (.xlsx)</button>
+        <button onclick="closeValidationModal()" class="px-3 py-1.5 bg-slate-200 text-slate-700 text-xs rounded">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State
+    let invoices = [];
+    let collections = [];
+    let validationErrors = [];
+    let activeTab = 'invoices';
+
+    // Chart instances
+    let weeklyChartInstance = null;
+    let ageingChartInstance = null;
+    let regionChartInstance = null;
+    let stateChartInstance = null;
+
+    // Formatting INR
+    function formatINR(val, short = false) {
+      if (val === null || val === undefined || isNaN(val)) return '₹0';
+      const num = Number(val);
+      const isNeg = num < 0;
+      const absNum = Math.abs(num);
+
+      if (short) {
+        if (absNum >= 10000000) return `${isNeg ? '-' : ''}₹${(absNum / 10000000).toFixed(2)} Cr`;
+        if (absNum >= 100000) return `${isNeg ? '-' : ''}₹${(absNum / 100000).toFixed(2)} L`;
+        if (absNum >= 1000) return `${isNeg ? '-' : ''}₹${(absNum / 1000).toFixed(1)} K`;
+      }
+
+      const parts = absNum.toFixed(2).split('.');
+      let intPart = parts[0];
+      const decPart = parts[1];
+      let lastThree = intPart.substring(intPart.length - 3);
+      const other = intPart.substring(0, intPart.length - 3);
+      if (other !== '') lastThree = ',' + lastThree;
+      const formatted = other.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + lastThree;
+      return `${isNeg ? '-' : ''}₹${decPart && decPart !== '00' ? formatted + '.' + decPart : formatted}`;
+    }
+
+    function parseDateStr(val) {
+      if (!val) return null;
+      if (typeof val === 'number') {
+        const utc_days = Math.floor(val - 25569);
+        const d = new Date(utc_days * 86400 * 1000);
+        return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+      }
+      if (val instanceof Date) return isNaN(val.getTime()) ? null : val.toISOString().split('T')[0];
+      const s = String(val).trim();
+      const dmy = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+      if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+      const iso = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+      if (iso) return `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`;
+      const t = Date.parse(s);
+      return isNaN(t) ? null : new Date(t).toISOString().split('T')[0];
+    }
+
+    function getFY(dStr) {
+      if (!dStr) return 'Unknown FY';
+      const p = dStr.split('-');
+      if (p.length < 2) return 'Unknown FY';
+      const y = parseInt(p[0]);
+      const m = parseInt(p[1]);
+      if (m >= 4) return `FY ${y}-${String(y + 1).slice(-2)}`;
+      return `FY ${y - 1}-${String(y).slice(-2)}`;
+    }
+
+    function getWeek(dStr) {
+      if (!dStr) return '';
+      const d = new Date(dStr + 'T00:00:00Z');
+      if (isNaN(d.getTime())) return '';
+      const target = new Date(d.valueOf());
+      const dayNr = (d.getUTCDay() + 6) % 7;
+      target.setUTCDate(target.getUTCDate() - dayNr + 3);
+      const firstThursday = target.valueOf();
+      target.setUTCMonth(0, 1);
+      if (target.getUTCDay() !== 4) target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
+      const w = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+      return `${d.getUTCFullYear()}-W${String(w).padStart(2, '0')}`;
+    }
+
+    function daysDiff(d1, d2) {
+      const t1 = new Date(d1 + 'T00:00:00Z').getTime();
+      const t2 = new Date(d2 + 'T00:00:00Z').getTime();
+      return Math.floor((t1 - t2) / (1000 * 60 * 60 * 24));
+    }
+
+    function determineAgeing(overdueDays, outstanding) {
+      if (outstanding <= 0.01 || overdueDays <= 0) return 'Not Due';
+      if (overdueDays <= 30) return '1–30 Days';
+      if (overdueDays <= 60) return '31–60 Days';
+      if (overdueDays <= 90) return '61–90 Days';
+      return 'Above 90 Days';
+    }
+
+    function determineStatus(invAmt, collAmt) {
+      const diff = invAmt - collAmt;
+      if (collAmt <= 0.001) return 'Unpaid';
+      if (Math.abs(diff) < 0.01) return 'Fully Paid';
+      if (diff > 0.01) return 'Partially Paid';
+      return 'Overcollected';
+    }
+
+    // Validation
+    function validateBilling(rows) {
+      const valid = [];
+      const errs = [];
+      const seen = new Map();
+
+      rows.forEach((r, idx) => {
+        const rowNum = idx + 2;
+        const invNo = String(r['Invoice No'] || r['Invoice Number'] || r['invoice_no'] || '').trim();
+        const cust = String(r['Customer'] || r['Customer Name'] || r['customer'] || '').trim();
+        const reg = String(r['Region'] || r['region'] || 'West').trim() || 'West';
+        const st = String(r['State'] || r['state'] || 'Maharashtra').trim() || 'Maharashtra';
+        const sp = String(r['Salesperson'] || r['salesperson'] || 'General').trim();
+        const dStr = parseDateStr(r['Invoice Date'] || r['invoice_date'] || r['Date']);
+        let dueStr = parseDateStr(r['Due Date'] || r['due_date']);
+        const amtStr = String(r['Invoice Amount'] || r['Amount'] || '').replace(/₹|,|\s/g, '');
+        const amt = Number(amtStr);
+
+        let fatal = false;
+        if (!invNo) {
+          errs.push({ file: 'Billing', row: rowNum, field: 'Invoice No', value: '', message: 'Invoice Number is mandatory.' });
+          fatal = true;
+        }
+        if (!cust) {
+          errs.push({ file: 'Billing', row: rowNum, field: 'Customer', value: '', message: 'Customer Name is mandatory.' });
+          fatal = true;
+        }
+        if (!dStr) {
+          errs.push({ file: 'Billing', row: rowNum, field: 'Invoice Date', value: r['Invoice Date'], message: 'Invoice Date is invalid.' });
+          fatal = true;
+        }
+        if (isNaN(amt) || amt <= 0) {
+          errs.push({ file: 'Billing', row: rowNum, field: 'Invoice Amount', value: r['Invoice Amount'], message: 'Invoice Amount must be greater than zero.' });
+          fatal = true;
+        }
+        if (invNo) {
+          if (seen.has(invNo)) {
+            errs.push({ file: 'Billing', row: rowNum, field: 'Invoice No', value: invNo, message: `Duplicate invoice number found (first seen at row ${seen.get(invNo)}).` });
+            fatal = true;
+          } else seen.set(invNo, rowNum);
+        }
+
+        if (!dueStr && dStr) {
+          const d = new Date(dStr + 'T00:00:00Z');
+          d.setUTCDate(d.getUTCDate() + 30);
+          dueStr = d.toISOString().split('T')[0];
+        }
+
+        if (!fatal) {
+          valid.push({ invoiceNo: invNo, customer: cust, region: reg, state: st, salesperson: sp, invoiceDate: dStr, dueDate: dueStr, invoiceAmount: amt });
+        }
+      });
+      return { valid, errors: errs };
+    }
+
+    function validateCollections(rows) {
+      const valid = [];
+      const errs = [];
+      const seen = new Set();
+
+      rows.forEach((r, idx) => {
+        const rowNum = idx + 2;
+        const invNo = String(r['Invoice No'] || r['Invoice Number'] || r['invoice_no'] || '').trim();
+        const cust = String(r['Customer'] || r['Customer Name'] || '').trim();
+        const dStr = parseDateStr(r['Collection Date'] || r['Payment Date'] || r['Date']);
+        const amtStr = String(r['Collection Amount'] || r['Amount'] || '').replace(/₹|,|\s/g, '');
+        const amt = Number(amtStr);
+        const ref = String(r['Payment Reference'] || r['UTR No'] || `TXN-${idx+1}`).trim();
+        const mode = String(r['Payment Mode'] || 'RTGS').trim();
+        const bank = String(r['Bank'] || 'HDFC Bank').trim();
+        const reg = String(r['Region'] || '').trim();
+        const st = String(r['State'] || '').trim();
+
+        let fatal = false;
+        if (!invNo) {
+          errs.push({ file: 'Collection', row: rowNum, field: 'Invoice No', value: '', message: 'Invoice No is mandatory in collections.' });
+          fatal = true;
+        }
+        if (!dStr) {
+          errs.push({ file: 'Collection', row: rowNum, field: 'Collection Date', value: r['Collection Date'], message: 'Collection Date is invalid.' });
+          fatal = true;
+        }
+        if (isNaN(amt) || amt <= 0) {
+          errs.push({ file: 'Collection', row: rowNum, field: 'Collection Amount', value: r['Collection Amount'], message: 'Collection Amount must be > 0.' });
+          fatal = true;
+        }
+
+        const key = `${invNo}_${ref}_${amt}_${dStr}`;
+        if (seen.has(key)) {
+          errs.push({ file: 'Collection', row: rowNum, field: 'Payment Reference', value: ref, message: `Duplicate transaction ignored to prevent double counting.` });
+          return;
+        }
+        seen.add(key);
+
+        if (!fatal) {
+          valid.push({ id: `c-${idx}`, invoiceNo: invNo, customer: cust, collectionDate: dStr, collectionAmount: amt, paymentReference: ref, paymentMode: mode, bank, region: reg, state: st });
+        }
+      });
+      return { valid, errors: errs };
+    }
+
+    // Reconcile
+    function reconcile(invList, collList, asOf = '2026-10-31') {
+      const collsByInv = new Map();
+      const invMap = new Map();
+
+      invList.forEach(i => invMap.set(i.invoiceNo, i));
+      collList.forEach(c => {
+        const l = collsByInv.get(c.invoiceNo) || [];
+        l.push(c);
+        collsByInv.set(c.invoiceNo, l);
+      });
+
+      let totalBill = 0, totalColl = 0, totalOut = 0, totalOverdue = 0;
+
+      const recInvoices = invList.map(inv => {
+        const matched = collsByInv.get(inv.invoiceNo) || [];
+        const cTotal = matched.reduce((s, c) => s + c.collectionAmount, 0);
+        const out = Math.max(0, inv.invoiceAmount - cTotal);
+        const cPercent = inv.invoiceAmount > 0 ? (cTotal / inv.invoiceAmount) * 100 : 0;
+        const diffDays = daysDiff(asOf, inv.dueDate);
+        const overdueDays = out > 0.01 ? Math.max(0, diffDays) : 0;
+        const ageing = determineAgeing(overdueDays, out);
+        const status = determineStatus(inv.invoiceAmount, cTotal);
+
+        totalBill += inv.invoiceAmount;
+        totalColl += cTotal;
+        totalOut += out;
+        if (overdueDays > 0) totalOverdue += out;
+
+        return { ...inv, collectionAmount: cTotal, outstandingAmount: out, collectionPercentage: cPercent, overdueDays, ageingBucket: ageing, invoiceStatus: status, collections: matched };
+      });
+
+      const recCollections = collList.map(c => {
+        const inv = invMap.get(c.invoiceNo);
+        let recStatus = 'Matched';
+        if (!inv) recStatus = 'Unmatched Invoice';
+        else {
+          const allColls = collsByInv.get(c.invoiceNo) || [];
+          const sum = allColls.reduce((s, x) => s + x.collectionAmount, 0);
+          if (sum > inv.invoiceAmount) recStatus = 'Overcollected';
+          else if (sum < inv.invoiceAmount) recStatus = 'Partial Match';
+        }
+        return {
+          ...c,
+          customer: c.customer || (inv ? inv.customer : 'Unknown'),
+          region: c.region || (inv ? inv.region : 'General'),
+          state: c.state || (inv ? inv.state : 'General'),
+          reconciliationStatus: recStatus
+        };
+      });
+
+      // Customer Summary
+      const custMap = new Map();
+      recInvoices.forEach(inv => {
+        const cur = custMap.get(inv.customer) || { customer: inv.customer, region: inv.region, state: inv.state, invoices: [], collections: [] };
+        cur.invoices.push(inv);
+        cur.collections.push(...inv.collections);
+        custMap.set(inv.customer, cur);
+      });
+
+      const custSummaries = Array.from(custMap.values()).map(c => {
+        const b = c.invoices.reduce((s, i) => s + i.invoiceAmount, 0);
+        const cl = c.invoices.reduce((s, i) => s + i.collectionAmount, 0);
+        const out = Math.max(0, b - cl);
+        const cp = b > 0 ? (cl / b) * 100 : 0;
+        const overdue = c.invoices.reduce((s, i) => i.overdueDays > 0 ? s + i.outstandingAmount : s, 0);
+
+        let delayDays = 0, dCount = 0, lastD = '';
+        c.invoices.forEach(inv => {
+          inv.collections.forEach(col => {
+            if (!lastD || col.collectionDate > lastD) lastD = col.collectionDate;
+            delayDays += Math.max(0, daysDiff(col.collectionDate, inv.dueDate));
+            dCount++;
+          });
+        });
+        const avgDelay = dCount > 0 ? Math.round(delayDays / dCount) : 0;
+
+        let maxOverdue = 0;
+        c.invoices.forEach(i => { if (i.outstandingAmount > 0 && i.overdueDays > maxOverdue) maxOverdue = i.overdueDays; });
+        const ageing = determineAgeing(maxOverdue, out);
+
+        let risk = 'Low Risk';
+        if (maxOverdue > 60 || (overdue > 500000 && cp < 60)) risk = 'High Risk';
+        else if (maxOverdue > 30 || cp < 80) risk = 'Medium Risk';
+
+        return { customer: c.customer, region: c.region, state: c.state, totalBilling: b, totalCollection: cl, totalOutstanding: out, collectionPercentage: cp, overdueOutstanding: overdue, averagePaymentDelay: avgDelay, lastCollectionDate: lastD || '-', ageingBucket: ageing, customerRiskCategory: risk };
+      });
+      custSummaries.sort((a,b) => b.totalOutstanding - a.totalOutstanding);
+
+      return {
+        reconciledInvoices: recInvoices,
+        reconciledCollections: recCollections,
+        customerSummaries: custSummaries,
+        summary: {
+          totalBilling: totalBill,
+          totalCollection: totalColl,
+          totalOutstanding: totalOut,
+          totalOverdue: totalOverdue,
+          efficiency: totalBill > 0 ? (totalColl / totalBill) * 100 : 0
+        }
+      };
+    }
+
+    // Comprehensive Sample Data
+    function getSampleData() {
+      const invs = [
+        { invoiceNo: 'INV/2026/0101', customer: 'Tata Consultancy Services Ltd', region: 'West', state: 'Maharashtra', salesperson: 'Amit Sharma', invoiceDate: '2026-08-05', dueDate: '2026-09-04', invoiceAmount: 1850000 },
+        { invoiceNo: 'INV/2026/0102', customer: 'Reliance Retail Ventures', region: 'West', state: 'Gujarat', salesperson: 'Amit Sharma', invoiceDate: '2026-08-10', dueDate: '2026-09-09', invoiceAmount: 2400000 },
+        { invoiceNo: 'INV/2026/0103', customer: 'Infosys Technologies Ltd', region: 'South', state: 'Karnataka', salesperson: 'Deepak Rao', invoiceDate: '2026-08-15', dueDate: '2026-09-14', invoiceAmount: 1450000 },
+        { invoiceNo: 'INV/2026/0104', customer: 'HCL Technologies', region: 'North', state: 'Uttar Pradesh', salesperson: 'Pooja Verma', invoiceDate: '2026-08-20', dueDate: '2026-09-19', invoiceAmount: 980000 },
+        { invoiceNo: 'INV/2026/0105', customer: 'Wipro Enterprises Ltd', region: 'South', state: 'Karnataka', salesperson: 'Deepak Rao', invoiceDate: '2026-08-28', dueDate: '2026-09-27', invoiceAmount: 1120000 },
+        { invoiceNo: 'INV/2026/0106', customer: 'Larsen & Toubro Ltd', region: 'West', state: 'Maharashtra', salesperson: 'Amit Sharma', invoiceDate: '2026-09-01', dueDate: '2026-10-01', invoiceAmount: 3200000 },
+        { invoiceNo: 'INV/2026/0107', customer: 'Mahindra & Mahindra', region: 'West', state: 'Maharashtra', salesperson: 'Amit Sharma', invoiceDate: '2026-09-05', dueDate: '2026-10-05', invoiceAmount: 1650000 },
+        { invoiceNo: 'INV/2026/0108', customer: 'Sun Pharmaceutical Ltd', region: 'West', state: 'Gujarat', salesperson: 'Vikram Joshi', invoiceDate: '2026-09-10', dueDate: '2026-10-10', invoiceAmount: 890000 },
+        { invoiceNo: 'INV/2026/0109', customer: 'ITC Limited', region: 'East', state: 'West Bengal', salesperson: 'Sourav Roy', invoiceDate: '2026-09-12', dueDate: '2026-10-12', invoiceAmount: 2150000 },
+        { invoiceNo: 'INV/2026/0110', customer: 'Bharti Airtel Ltd', region: 'North', state: 'Delhi', salesperson: 'Pooja Verma', invoiceDate: '2026-09-15', dueDate: '2026-10-15', invoiceAmount: 2750000 },
+        { invoiceNo: 'INV/2026/0111', customer: 'Asian Paints Ltd', region: 'West', state: 'Maharashtra', salesperson: 'Amit Sharma', invoiceDate: '2026-09-18', dueDate: '2026-10-18', invoiceAmount: 1350000 },
+        { invoiceNo: 'INV/2026/0112', customer: 'Apollo Hospitals Enterprise', region: 'South', state: 'Tamil Nadu', salesperson: 'Karthik Raja', invoiceDate: '2026-09-22', dueDate: '2026-10-22', invoiceAmount: 1980000 },
+        { invoiceNo: 'INV/2026/0113', customer: 'Maruti Suzuki India', region: 'North', state: 'Haryana', salesperson: 'Pooja Verma', invoiceDate: '2026-09-25', dueDate: '2026-10-25', invoiceAmount: 3100000 },
+        { invoiceNo: 'INV/2026/0114', customer: 'Titan Company Ltd', region: 'South', state: 'Karnataka', salesperson: 'Deepak Rao', invoiceDate: '2026-09-28', dueDate: '2026-10-28', invoiceAmount: 820000 },
+        { invoiceNo: 'INV/2026/0115', customer: 'Dr Reddys Laboratories', region: 'South', state: 'Telangana', salesperson: 'Karthik Raja', invoiceDate: '2026-10-01', dueDate: '2026-10-31', invoiceAmount: 1420000 },
+        { invoiceNo: 'INV/2026/0116', customer: 'Bajaj Finance Ltd', region: 'West', state: 'Maharashtra', salesperson: 'Amit Sharma', invoiceDate: '2026-10-04', dueDate: '2026-11-03', invoiceAmount: 2100000 },
+        { invoiceNo: 'INV/2026/0117', customer: 'Adani Ports & SEZ', region: 'West', state: 'Gujarat', salesperson: 'Vikram Joshi', invoiceDate: '2026-10-08', dueDate: '2026-11-07', invoiceAmount: 3800000 },
+        { invoiceNo: 'INV/2026/0118', customer: 'JSW Steel Ltd', region: 'East', state: 'Odisha', salesperson: 'Sourav Roy', invoiceDate: '2026-10-12', dueDate: '2026-11-11', invoiceAmount: 2900000 },
+        { invoiceNo: 'INV/2026/0119', customer: 'UltraTech Cement', region: 'Central', state: 'Madhya Pradesh', salesperson: 'Pooja Verma', invoiceDate: '2026-10-15', dueDate: '2026-11-14', invoiceAmount: 1750000 },
+        { invoiceNo: 'INV/2026/0120', customer: 'Tata Motors Ltd', region: 'West', state: 'Maharashtra', salesperson: 'Amit Sharma', invoiceDate: '2026-10-18', dueDate: '2026-11-17', invoiceAmount: 2600000 }
+      ];
+
+      const colls = [
+        { id: 'c1', invoiceNo: 'INV/2026/0101', customer: 'Tata Consultancy Services Ltd', collectionDate: '2026-08-25', collectionAmount: 1000000, paymentReference: 'UTR/HDFC/908123', paymentMode: 'RTGS', bank: 'HDFC Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c2', invoiceNo: 'INV/2026/0101', customer: 'Tata Consultancy Services Ltd', collectionDate: '2026-09-02', collectionAmount: 850000, paymentReference: 'UTR/HDFC/912845', paymentMode: 'RTGS', bank: 'HDFC Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c3', invoiceNo: 'INV/2026/0102', customer: 'Reliance Retail Ventures', collectionDate: '2026-09-12', collectionAmount: 1500000, paymentReference: 'UTR/ICIC/881203', paymentMode: 'NEFT', bank: 'ICICI Bank', region: 'West', state: 'Gujarat' },
+        { id: 'c4', invoiceNo: 'INV/2026/0103', customer: 'Infosys Technologies Ltd', collectionDate: '2026-09-10', collectionAmount: 1450000, paymentReference: 'UTR/SBIN/442190', paymentMode: 'RTGS', bank: 'SBI', region: 'South', state: 'Karnataka' },
+        { id: 'c5', invoiceNo: 'INV/2026/0104', customer: 'HCL Technologies', collectionDate: '2026-09-18', collectionAmount: 980000, paymentReference: 'UTR/AXIS/771928', paymentMode: 'NEFT', bank: 'Axis Bank', region: 'North', state: 'Uttar Pradesh' },
+        { id: 'c6', invoiceNo: 'INV/2026/0105', customer: 'Wipro Enterprises Ltd', collectionDate: '2026-10-02', collectionAmount: 600000, paymentReference: 'UTR/KKBK/312455', paymentMode: 'NEFT', bank: 'Kotak', region: 'South', state: 'Karnataka' },
+        { id: 'c7', invoiceNo: 'INV/2026/0106', customer: 'Larsen & Toubro Ltd', collectionDate: '2026-09-20', collectionAmount: 1000000, paymentReference: 'UTR/HDFC/992811', paymentMode: 'RTGS', bank: 'HDFC Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c8', invoiceNo: 'INV/2026/0106', customer: 'Larsen & Toubro Ltd', collectionDate: '2026-10-05', collectionAmount: 1000000, paymentReference: 'UTR/HDFC/993412', paymentMode: 'RTGS', bank: 'HDFC Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c9', invoiceNo: 'INV/2026/0106', customer: 'Larsen & Toubro Ltd', collectionDate: '2026-10-22', collectionAmount: 500000, paymentReference: 'UTR/HDFC/994101', paymentMode: 'NEFT', bank: 'HDFC Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c10', invoiceNo: 'INV/2026/0107', customer: 'Mahindra & Mahindra', collectionDate: '2026-10-04', collectionAmount: 1650000, paymentReference: 'UTR/ICIC/992102', paymentMode: 'RTGS', bank: 'ICICI Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c11', invoiceNo: 'INV/2026/0108', customer: 'Sun Pharmaceutical Ltd', collectionDate: '2026-10-09', collectionAmount: 890000, paymentReference: 'UTR/SBIN/556712', paymentMode: 'NEFT', bank: 'SBI', region: 'West', state: 'Gujarat' },
+        { id: 'c12', invoiceNo: 'INV/2026/0109', customer: 'ITC Limited', collectionDate: '2026-10-11', collectionAmount: 1500000, paymentReference: 'UTR/HDFC/110293', paymentMode: 'RTGS', bank: 'HDFC Bank', region: 'East', state: 'West Bengal' },
+        { id: 'c13', invoiceNo: 'INV/2026/0110', customer: 'Bharti Airtel Ltd', collectionDate: '2026-10-14', collectionAmount: 2750000, paymentReference: 'UTR/AXIS/882109', paymentMode: 'RTGS', bank: 'Axis Bank', region: 'North', state: 'Delhi' },
+        { id: 'c14', invoiceNo: 'INV/2026/0111', customer: 'Asian Paints Ltd', collectionDate: '2026-10-17', collectionAmount: 1350000, paymentReference: 'UTR/KKBK/771234', paymentMode: 'RTGS', bank: 'Kotak', region: 'West', state: 'Maharashtra' },
+        { id: 'c15', invoiceNo: 'INV/2026/0112', customer: 'Apollo Hospitals Enterprise', collectionDate: '2026-10-21', collectionAmount: 1000000, paymentReference: 'UTR/ICIC/441209', paymentMode: 'NEFT', bank: 'ICICI Bank', region: 'South', state: 'Tamil Nadu' },
+        { id: 'c16', invoiceNo: 'INV/2026/0113', customer: 'Maruti Suzuki India', collectionDate: '2026-10-24', collectionAmount: 3100000, paymentReference: 'UTR/SBIN/998124', paymentMode: 'RTGS', bank: 'SBI', region: 'North', state: 'Haryana' },
+        { id: 'c17', invoiceNo: 'INV/2026/0114', customer: 'Titan Company Ltd', collectionDate: '2026-10-27', collectionAmount: 820000, paymentReference: 'UTR/HDFC/334211', paymentMode: 'NEFT', bank: 'HDFC Bank', region: 'South', state: 'Karnataka' },
+        { id: 'c18', invoiceNo: 'INV/2026/0116', customer: 'Bajaj Finance Ltd', collectionDate: '2026-10-29', collectionAmount: 1000000, paymentReference: 'UTR/AXIS/129845', paymentMode: 'RTGS', bank: 'Axis Bank', region: 'West', state: 'Maharashtra' },
+        { id: 'c19', invoiceNo: 'INV/2026/0117', customer: 'Adani Ports & SEZ', collectionDate: '2026-10-30', collectionAmount: 1800000, paymentReference: 'UTR/ICIC/776123', paymentMode: 'RTGS', bank: 'ICICI Bank', region: 'West', state: 'Gujarat' }
+      ];
+      return { invoices: invs, collections: colls };
+    }
+
+    function loadSamplePANData() {
+      const s = getSampleData();
+      invoices = s.invoices;
+      collections = s.collections;
+      validationErrors = [];
+      document.getElementById('billingFileName').innerText = 'PAN_India_Corporate_Invoices_Sample.xlsx';
+      document.getElementById('billingCount').innerText = `${invoices.length} invoices`;
+      document.getElementById('collectionFileName').innerText = 'PAN_India_Bank_Receipts_Sample.xlsx';
+      document.getElementById('collectionCount').innerText = `${collections.length} receipts`;
+      saveLocal();
+      populateFilterDropdowns();
+      applyFilters();
+    }
+
+    function saveLocal() {
+      try {
+        localStorage.setItem('pan_invoices', JSON.stringify(invoices));
+        localStorage.setItem('pan_collections', JSON.stringify(collections));
+        localStorage.setItem('pan_refresh', new Date().toLocaleTimeString());
+      } catch(e){}
+    }
+
+    function loadLocal() {
+      try {
+        const storedI = localStorage.getItem('pan_invoices');
+        const storedC = localStorage.getItem('pan_collections');
+        if (storedI && storedC) {
+          invoices = JSON.parse(storedI);
+          collections = JSON.parse(storedC);
+          document.getElementById('billingFileName').innerText = 'Stored Invoices';
+          document.getElementById('billingCount').innerText = `${invoices.length} invoices`;
+          document.getElementById('collectionFileName').innerText = 'Stored Receipts';
+          document.getElementById('collectionCount').innerText = `${collections.length} receipts`;
+          populateFilterDropdowns();
+          applyFilters();
+          return;
+        }
+      } catch(e){}
+      loadSamplePANData();
+    }
+
+    // Handlers for File Upload
+    function handleBillingUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+          const res = validateBilling(rows);
+          invoices = res.valid;
+          validationErrors = [...validationErrors.filter(x => x.file !== 'Billing'), ...res.errors];
+          document.getElementById('billingFileName').innerText = file.name;
+          document.getElementById('billingCount').innerText = `${invoices.length} valid records`;
+          updateValidationUI();
+          saveLocal();
+          populateFilterDropdowns();
+          applyFilters();
+        } catch(err) {
+          alert('Error parsing billing file. Please upload valid Excel or CSV.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handleCollectionUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+          const res = validateCollections(rows);
+          collections = res.valid;
+          validationErrors = [...validationErrors.filter(x => x.file !== 'Collection'), ...res.errors];
+          document.getElementById('collectionFileName').innerText = file.name;
+          document.getElementById('collectionCount').innerText = `${collections.length} valid records`;
+          updateValidationUI();
+          saveLocal();
+          populateFilterDropdowns();
+          applyFilters();
+        } catch(err) {
+          alert('Error parsing collection file. Please upload valid Excel or CSV.');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function updateValidationUI() {
+      const b = document.getElementById('validationBanner');
+      if (validationErrors.length > 0) {
+        b.classList.remove('hidden');
+        document.getElementById('validationErrorSummary').innerText = `${validationErrors.length} validation errors flagged. Blank mandatory fields highlighted in RED.`;
+      } else {
+        b.classList.add('hidden');
+      }
+    }
+
+    // Populate Filters
+    function populateFilterDropdowns() {
+      const fys = new Set(), months = new Set(), weeks = new Set(), regs = new Set(), states = new Set(), custs = new Set(), sps = new Set();
+      invoices.forEach(i => {
+        fys.add(getFY(i.invoiceDate));
+        months.add(i.invoiceDate.slice(0, 7));
+        weeks.add(getWeek(i.invoiceDate));
+        if (i.region) regs.add(i.region);
+        if (i.state) states.add(i.state);
+        if (i.customer) custs.add(i.customer);
+        if (i.salesperson) sps.add(i.salesperson);
+      });
+
+      fillSelect('filterFY', Array.from(fys).sort());
+      fillSelect('filterMonth', Array.from(months).sort());
+      fillSelect('filterWeek', Array.from(weeks).sort());
+      fillSelect('filterRegion', Array.from(regs).sort());
+      fillSelect('filterState', Array.from(states).sort());
+      fillSelect('filterCustomer', Array.from(custs).sort());
+      fillSelect('filterSalesperson', Array.from(sps).sort());
+    }
+
+    function fillSelect(id, list) {
+      const sel = document.getElementById(id);
+      const curr = sel.value;
+      const firstOpt = sel.options[0];
+      sel.innerHTML = '';
+      sel.appendChild(firstOpt);
+      list.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.innerText = v;
+        sel.appendChild(opt);
+      });
+      sel.value = list.includes(curr) ? curr : 'All';
+    }
+
+    function handleRegionChange() {
+      const reg = document.getElementById('filterRegion').value;
+      const states = new Set();
+      invoices.forEach(i => {
+        if (reg === 'All' || i.region === reg) {
+          if (i.state) states.add(i.state);
+        }
+      });
+      fillSelect('filterState', Array.from(states).sort());
+      applyFilters();
+    }
+
+    function resetFilters() {
+      document.getElementById('filterFY').value = 'All';
+      document.getElementById('filterMonth').value = 'All';
+      document.getElementById('filterWeek').value = 'All';
+      document.getElementById('filterRegion').value = 'All';
+      document.getElementById('filterState').value = 'All';
+      document.getElementById('filterCustomer').value = 'All';
+      document.getElementById('filterSalesperson').value = 'All';
+      document.getElementById('filterStatus').value = 'All';
+      document.getElementById('filterAgeing').value = 'All';
+      document.getElementById('filterSearch').value = '';
+      applyFilters();
+    }
+
+    let currentReconciled = null;
+
+    // Apply Filters & Re-Reconcile
+    function applyFilters() {
+      const fy = document.getElementById('filterFY').value;
+      const m = document.getElementById('filterMonth').value;
+      const w = document.getElementById('filterWeek').value;
+      const reg = document.getElementById('filterRegion').value;
+      const st = document.getElementById('filterState').value;
+      const cust = document.getElementById('filterCustomer').value;
+      const sp = document.getElementById('filterSalesperson').value;
+      const status = document.getElementById('filterStatus').value;
+      const ageing = document.getElementById('filterAgeing').value;
+      const q = (document.getElementById('filterSearch').value || '').toLowerCase();
+
+      const filteredInvs = invoices.filter(i => {
+        if (fy !== 'All' && getFY(i.invoiceDate) !== fy) return false;
+        if (m !== 'All' && !i.invoiceDate.startsWith(m)) return false;
+        if (w !== 'All' && getWeek(i.invoiceDate) !== w) return false;
+        if (reg !== 'All' && i.region !== reg) return false;
+        if (st !== 'All' && i.state !== st) return false;
+        if (cust !== 'All' && i.customer !== cust) return false;
+        if (sp !== 'All' && i.salesperson !== sp) return false;
+        if (q) {
+          const match = i.invoiceNo.toLowerCase().includes(q) || i.customer.toLowerCase().includes(q);
+          if (!match) return false;
+        }
+        return true;
+      });
+
+      const res = reconcile(filteredInvs, collections);
+
+      // Post status/ageing filters
+      let finalInvs = res.reconciledInvoices;
+      if (status !== 'All') finalInvs = finalInvs.filter(x => x.invoiceStatus === status);
+      if (ageing !== 'All') finalInvs = finalInvs.filter(x => x.ageingBucket === ageing);
+
+      currentReconciled = { ...res, reconciledInvoices: finalInvs };
+
+      document.getElementById('filteredCountBadge').innerText = `(${finalInvs.length} of ${invoices.length} invoices)`;
+      document.getElementById('lastRefreshTime').innerText = new Date().toLocaleTimeString();
+
+      updateKPIs(res.summary);
+      renderCharts(finalInvs, res.reconciledCollections, res.customerSummaries);
+      renderTables(finalInvs, res.reconciledCollections, res.customerSummaries);
+    }
+
+    function updateKPIs(sum) {
+      document.getElementById('kpiBillingShort').innerText = formatINR(sum.totalBilling, true);
+      document.getElementById('kpiBillingExact').innerText = `Exact: ${formatINR(sum.totalBilling)}`;
+
+      document.getElementById('kpiCollectionShort').innerText = formatINR(sum.totalCollection, true);
+      document.getElementById('kpiCollectionExact').innerText = `Exact: ${formatINR(sum.totalCollection)}`;
+
+      document.getElementById('kpiOutstandingShort').innerText = formatINR(sum.totalOutstanding, true);
+      document.getElementById('kpiOutstandingExact').innerText = `Exact: ${formatINR(sum.totalOutstanding)}`;
+
+      document.getElementById('kpiEfficiency').innerText = `${sum.efficiency.toFixed(1)}%`;
+      document.getElementById('kpiTargetComparison').innerText = `Target: 85% (${(sum.efficiency - 85).toFixed(1)}% delta)`;
+
+      document.getElementById('kpiOverdueShort').innerText = formatINR(sum.totalOverdue, true);
+      document.getElementById('kpiOverdueExact').innerText = `Exact: ${formatINR(sum.totalOverdue)}`;
+
+      const diff = Math.abs((sum.totalBilling - sum.totalCollection) - sum.totalOutstanding);
+      document.getElementById('auditFormulaText').innerText = `[Billing: ${formatINR(sum.totalBilling, true)}] − [Collection: ${formatINR(sum.totalCollection, true)}] = [Outstanding: ${formatINR(sum.totalOutstanding, true)}]`;
+      document.getElementById('auditDiffBadge').innerText = diff < 1 ? `₹0.00 (Balanced)` : `₹${diff.toFixed(2)} Mismatch`;
+    }
+
+    function renderCharts(invs, colls, custs) {
+      // 1. Weekly Chart
+      const wMap = new Map();
+      invs.forEach(i => {
+        const w = getWeek(i.invoiceDate) || 'Other';
+        const cur = wMap.get(w) || { b: 0, c: 0 };
+        cur.b += i.invoiceAmount;
+        wMap.set(w, cur);
+      });
+      colls.forEach(c => {
+        const w = getWeek(c.collectionDate) || 'Other';
+        const cur = wMap.get(w) || { b: 0, c: 0 };
+        cur.c += c.collectionAmount;
+        wMap.set(w, cur);
+      });
+      const sortedW = Array.from(wMap.keys()).sort();
+      const wLabels = sortedW.length ? sortedW : ['W1'];
+      const wB = wLabels.map(k => wMap.get(k)?.b || 0);
+      const wC = wLabels.map(k => wMap.get(k)?.c || 0);
+
+      if (weeklyChartInstance) weeklyChartInstance.destroy();
+      weeklyChartInstance = new Chart(document.getElementById('weeklyChart'), {
+        type: 'bar',
+        data: {
+          labels: wLabels,
+          datasets: [
+            { label: 'Billing (₹)', data: wB, backgroundColor: '#3b82f6' },
+            { label: 'Collection (₹)', data: wC, backgroundColor: '#10b981' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 2. Ageing Chart
+      const buckets = { 'Not Due': 0, '1–30 Days': 0, '31–60 Days': 0, '61–90 Days': 0, 'Above 90 Days': 0 };
+      invs.forEach(i => { if (i.outstandingAmount > 0) buckets[i.ageingBucket] += i.outstandingAmount; });
+
+      if (ageingChartInstance) ageingChartInstance.destroy();
+      ageingChartInstance = new Chart(document.getElementById('ageingChart'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(buckets),
+          datasets: [{ label: 'Outstanding (₹)', data: Object.values(buckets), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#f97316', '#ef4444'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 3. Region Chart
+      const rMap = { 'North': 0, 'South': 0, 'West': 0, 'East': 0, 'Central': 0 };
+      colls.forEach(c => { if (rMap[c.region] !== undefined) rMap[c.region] += c.collectionAmount; else rMap['West'] += c.collectionAmount; });
+
+      if (regionChartInstance) regionChartInstance.destroy();
+      regionChartInstance = new Chart(document.getElementById('regionChart'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(rMap),
+          datasets: [{ data: Object.values(rMap), backgroundColor: ['#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#64748b'] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 4. State Chart
+      const sMap = new Map();
+      invs.forEach(i => { sMap.set(i.state, (sMap.get(i.state) || 0) + i.outstandingAmount); });
+      const topS = Array.from(sMap.entries()).sort((a,b) => b[1] - a[1]).slice(0, 6);
+
+      if (stateChartInstance) stateChartInstance.destroy();
+      stateChartInstance = new Chart(document.getElementById('stateChart'), {
+        type: 'bar',
+        data: {
+          labels: topS.map(x => x[0]),
+          datasets: [{ label: 'Outstanding (₹)', data: topS.map(x => x[1]), backgroundColor: '#ef4444' }]
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function renderTables(invs, colls, custs) {
+      document.getElementById('tableRecordCount').innerText = `${invs.length} Invoices · ${colls.length} Receipts · ${custs.length} Customers`;
+
+      // Sheet 1: Invoices
+      const tbody1 = document.getElementById('invoicesTableBody');
+      tbody1.innerHTML = invs.map(i => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2 px-3 font-mono font-bold">${i.invoiceNo}</td>
+          <td class="py-2 px-3 font-medium">${i.customer}</td>
+          <td class="py-2 px-3 text-slate-600">${i.region} · ${i.state}</td>
+          <td class="py-2 px-3 text-slate-600">${i.salesperson}</td>
+          <td class="py-2 px-3 font-mono">${i.invoiceDate}</td>
+          <td class="py-2 px-3 font-mono">${i.dueDate}</td>
+          <td class="py-2 px-3 text-right font-mono">${formatINR(i.invoiceAmount)}</td>
+          <td class="py-2 px-3 text-right font-mono text-emerald-700 font-semibold">${formatINR(i.collectionAmount)}</td>
+          <td class="py-2 px-3 text-right font-mono text-red-700 font-bold">${formatINR(i.outstandingAmount)}</td>
+          <td class="py-2 px-3 text-center font-mono">${i.collectionPercentage.toFixed(1)}%</td>
+          <td class="py-2 px-3 text-center font-mono">${i.overdueDays > 0 ? `<span class="text-red-600 font-bold">${i.overdueDays}d</span>` : '0d'}</td>
+          <td class="py-2 px-3 text-center"><span class="px-2 py-0.5 rounded text-2xs font-semibold bg-slate-100">${i.ageingBucket}</span></td>
+          <td class="py-2 px-3 text-center"><span class="px-2 py-0.5 rounded text-2xs font-semibold ${i.invoiceStatus === 'Fully Paid' ? 'bg-emerald-600 text-white' : i.invoiceStatus === 'Partially Paid' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}">${i.invoiceStatus}</span></td>
+        </tr>
+      `).join('');
+
+      // Sheet 2: Collections
+      const tbody2 = document.getElementById('collectionsTableBody');
+      tbody2.innerHTML = colls.map(c => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2 px-3 font-mono font-bold">${c.invoiceNo}</td>
+          <td class="py-2 px-3 font-medium">${c.customer}</td>
+          <td class="py-2 px-3 font-mono">${c.collectionDate}</td>
+          <td class="py-2 px-3 text-right font-mono text-emerald-700 font-bold">${formatINR(c.collectionAmount)}</td>
+          <td class="py-2 px-3 font-mono">${c.paymentReference}</td>
+          <td class="py-2 px-3">${c.paymentMode}</td>
+          <td class="py-2 px-3">${c.bank}</td>
+          <td class="py-2 px-3">${c.region}</td>
+          <td class="py-2 px-3">${c.state}</td>
+          <td class="py-2 px-3 text-center"><span class="px-2 py-0.5 rounded text-2xs font-semibold bg-emerald-100 text-emerald-800">${c.reconciliationStatus}</span></td>
+        </tr>
+      `).join('');
+
+      // Sheet 3: Customers
+      const tbody3 = document.getElementById('customersTableBody');
+      tbody3.innerHTML = custs.map(c => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2 px-3 font-bold">${c.customer}</td>
+          <td class="py-2 px-3">${c.region}</td>
+          <td class="py-2 px-3">${c.state}</td>
+          <td class="py-2 px-3 text-right font-mono">${formatINR(c.totalBilling)}</td>
+          <td class="py-2 px-3 text-right font-mono text-emerald-700 font-semibold">${formatINR(c.totalCollection)}</td>
+          <td class="py-2 px-3 text-right font-mono text-red-700 font-bold">${formatINR(c.totalOutstanding)}</td>
+          <td class="py-2 px-3 text-center font-mono">${c.collectionPercentage.toFixed(1)}%</td>
+          <td class="py-2 px-3 text-right font-mono text-red-600">${formatINR(c.overdueOutstanding)}</td>
+          <td class="py-2 px-3 text-center font-mono">${c.averagePaymentDelay}d</td>
+          <td class="py-2 px-3 font-mono">${c.lastCollectionDate}</td>
+          <td class="py-2 px-3 text-center">${c.ageingBucket}</td>
+          <td class="py-2 px-3 text-center"><span class="px-2 py-0.5 rounded text-2xs font-bold ${c.customerRiskCategory === 'High Risk' ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'}">${c.customerRiskCategory}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function switchTableTab(tab) {
+      activeTab = tab;
+      ['tabInvoices', 'tabCollections', 'tabCustomers'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['tabBtn1', 'tabBtn2', 'tabBtn3'].forEach(id => {
+        document.getElementById(id).className = 'px-3 py-1.5 font-semibold rounded-lg text-slate-600 hover:text-slate-900';
+      });
+
+      if (tab === 'invoices') {
+        document.getElementById('tabInvoices').classList.remove('hidden');
+        document.getElementById('tabBtn1').className = 'px-3 py-1.5 font-semibold rounded-lg bg-white border border-slate-200 text-slate-900 shadow-2xs';
+      } else if (tab === 'collections') {
+        document.getElementById('tabCollections').classList.remove('hidden');
+        document.getElementById('tabBtn2').className = 'px-3 py-1.5 font-semibold rounded-lg bg-white border border-slate-200 text-slate-900 shadow-2xs';
+      } else {
+        document.getElementById('tabCustomers').classList.remove('hidden');
+        document.getElementById('tabBtn3').className = 'px-3 py-1.5 font-semibold rounded-lg bg-white border border-slate-200 text-slate-900 shadow-2xs';
+      }
+    }
+
+    // Excel Export (Exactly 3 Sheets)
+    function exportExcelReport() {
+      if (!currentReconciled) return;
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Invoice Master
+      const s1 = currentReconciled.reconciledInvoices.map(i => ({
+        'Invoice No': i.invoiceNo,
+        'Customer': i.customer,
+        'Region': i.region,
+        'State': i.state,
+        'Salesperson': i.salesperson,
+        'Invoice Date': i.invoiceDate,
+        'Due Date': i.dueDate,
+        'Invoice Amount': i.invoiceAmount,
+        'Collection Amount': i.collectionAmount,
+        'Outstanding Amount': i.outstandingAmount,
+        'Collection %': `${i.collectionPercentage.toFixed(1)}%`,
+        'Overdue Days': i.overdueDays,
+        'Ageing Bucket': i.ageingBucket,
+        'Invoice Status': i.invoiceStatus
+      }));
+      const ws1 = XLSX.utils.json_to_sheet(s1);
+      ws1['!freeze'] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws1, 'Invoice Master');
+
+      // Sheet 2: Collection Details
+      const s2 = currentReconciled.reconciledCollections.map(c => ({
+        'Invoice No': c.invoiceNo,
+        'Customer': c.customer,
+        'Collection Date': c.collectionDate,
+        'Collection Amount': c.collectionAmount,
+        'Payment Reference': c.paymentReference,
+        'Payment Mode': c.paymentMode,
+        'Bank': c.bank,
+        'Region': c.region,
+        'State': c.state,
+        'Reconciliation Status': c.reconciliationStatus
+      }));
+      const ws2 = XLSX.utils.json_to_sheet(s2);
+      ws2['!freeze'] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws2, 'Collection Details');
+
+      // Sheet 3: Customer Summary
+      const s3 = currentReconciled.customerSummaries.map(c => ({
+        'Customer': c.customer,
+        'Region': c.region,
+        'State': c.state,
+        'Total Billing': c.totalBilling,
+        'Total Collection': c.totalCollection,
+        'Total Outstanding': c.totalOutstanding,
+        'Collection %': `${c.collectionPercentage.toFixed(1)}%`,
+        'Overdue Outstanding': c.overdueOutstanding,
+        'Average Payment Delay': `${c.averagePaymentDelay} Days`,
+        'Last Collection Date': c.lastCollectionDate,
+        'Ageing Bucket': c.ageingBucket,
+        'Customer Risk Category': c.customerRiskCategory
+      }));
+      const ws3 = XLSX.utils.json_to_sheet(s3);
+      ws3['!freeze'] = { xSplit: 0, ySplit: 1 };
+      XLSX.utils.book_append_sheet(wb, ws3, 'Customer Summary');
+
+      XLSX.writeFile(wb, 'PAN_India_Collection_Report.xlsx');
+    }
+
+    function downloadValidationErrors() {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(validationErrors);
+      XLSX.utils.book_append_sheet(wb, ws, 'Validation Errors');
+      XLSX.writeFile(wb, 'Validation_Errors_Report.xlsx');
+    }
+
+    function downloadSampleBillingTemplate() {
+      const wb = XLSX.utils.book_new();
+      const data = [
+        { 'Invoice No': 'INV/2026/0201', 'Customer': 'Tata Steel Ltd', 'Region': 'East', 'State': 'Jharkhand', 'Salesperson': 'Sourav Roy', 'Invoice Date': '2026-09-01', 'Due Date': '2026-10-01', 'Invoice Amount': 1500000 },
+        { 'Invoice No': 'INV/2026/0202', 'Customer': 'Infosys Ltd', 'Region': 'South', 'State': 'Karnataka', 'Salesperson': 'Deepak Rao', 'Invoice Date': '2026-09-10', 'Due Date': '2026-10-10', 'Invoice Amount': 2200000 }
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Billing');
+      XLSX.writeFile(wb, 'Sample_Customer_Billing_Data.xlsx');
+    }
+
+    function downloadSampleCollectionTemplate() {
+      const wb = XLSX.utils.book_new();
+      const data = [
+        { 'Invoice No': 'INV/2026/0201', 'Customer': 'Tata Steel Ltd', 'Collection Date': '2026-09-28', 'Collection Amount': 1500000, 'Payment Reference': 'UTR/SBIN/887123', 'Payment Mode': 'RTGS', 'Bank': 'SBI', 'Region': 'East', 'State': 'Jharkhand' }
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Collections');
+      XLSX.writeFile(wb, 'Sample_Collection_File.xlsx');
+    }
+
+    // Modals
+    function openMethodologyModal() { document.getElementById('methodologyModal').classList.remove('hidden'); }
+    function closeMethodologyModal() { document.getElementById('methodologyModal').classList.add('hidden'); }
+    function openResetModal() { document.getElementById('resetModal').classList.remove('hidden'); }
+    function closeResetModal() { document.getElementById('resetModal').classList.add('hidden'); }
+    function confirmResetData() {
+      localStorage.clear();
+      invoices = [];
+      collections = [];
+      validationErrors = [];
+      document.getElementById('billingFileName').innerText = 'No file';
+      document.getElementById('billingCount').innerText = '0 records';
+      document.getElementById('collectionFileName').innerText = 'No file';
+      document.getElementById('collectionCount').innerText = '0 records';
+      closeResetModal();
+      applyFilters();
+    }
+    function openValidationModal() {
+      const tbody = document.getElementById('validationModalTableBody');
+      tbody.innerHTML = validationErrors.map(e => `
+        <tr>
+          <td class="p-2 font-medium">${e.file}</td>
+          <td class="p-2 font-mono">Row ${e.row}</td>
+          <td class="p-2 font-semibold">${e.field}</td>
+          <td class="p-2 font-mono text-red-600 bg-red-50">${e.value || '[BLANK MANDATORY FIELD]'}</td>
+          <td class="p-2 text-slate-700">${e.message}</td>
+        </tr>
+      `).join('');
+      document.getElementById('validationModal').classList.remove('hidden');
+    }
+    function closeValidationModal() { document.getElementById('validationModal').classList.add('hidden'); }
+
+    // On Load
+    window.onload = function() {
+      loadLocal();
+    };
+  </script>
+</body>
+</html>
